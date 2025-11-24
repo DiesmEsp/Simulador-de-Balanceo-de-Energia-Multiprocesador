@@ -1,0 +1,104 @@
+# Configuración del Simulador de Balanceo de Energía
+
+simulation:
+  duration: 1000          # Duración en unidades de tiempo
+  time_step: 1            # Paso de tiempo
+  random_seed: 42         # Semilla para reproducibilidad
+
+processors:
+  count: 8                # Número de procesadores
+  heterogeneous: false    # Si true, procesadores con diferentes capacidades
+  
+  # Configuración homogénea (cuando heterogeneous: false)
+  default:
+    base_frequency: 1.0   # GHz (frecuencia mínima)
+    max_frequency: 3.5    # GHz (frecuencia máxima)
+    frequency_steps: 5    # Niveles de frecuencia disponibles
+    base_power: 5.0       # Watts (consumo en idle)
+    max_power: 95.0       # Watts (consumo a máxima frecuencia)
+    idle_power: 2.0       # Watts (consumo en estado inactivo)
+
+  # Configuración heterogénea (cuando heterogeneous: true)
+  types:
+    performance:
+      count: 2
+      base_frequency: 1.5
+      max_frequency: 4.0
+      frequency_steps: 5
+      base_power: 10.0
+      max_power: 125.0
+      idle_power: 5.0
+    
+    efficiency:
+      count: 4
+      base_frequency: 0.8
+      max_frequency: 2.5
+      frequency_steps: 4
+      base_power: 3.0
+      max_power: 45.0
+      idle_power: 1.0
+
+tasks:
+  # Generación de tareas
+  generation:
+    mode: "mixed"         # "cpu_bound", "io_bound", "mixed", "burst"
+    arrival_rate: 0.5     # Tareas por unidad de tiempo (Poisson)
+    total_tasks: 100      # Número total de tareas a generar
+  
+  # Características de tareas CPU-bound
+  cpu_bound:
+    duration_min: 50
+    duration_max: 200
+    cpu_intensity: 0.95   # 0-1, qué tan intensivo es el uso de CPU
+  
+  # Características de tareas I/O-bound
+  io_bound:
+    duration_min: 30
+    duration_max: 150
+    cpu_intensity: 0.3
+    io_wait_ratio: 0.6    # Porcentaje de tiempo en espera de I/O
+
+strategies:
+  # Performance-first
+  performance:
+    always_max_frequency: true
+    migration_threshold: 0.9
+    
+  # Energy-first
+  energy:
+    prefer_low_frequency: true
+    shutdown_idle_cores: true
+    idle_threshold: 0.1
+    
+  # DVFS Balanceado
+  dvfs:
+    load_low_threshold: 0.3
+    load_high_threshold: 0.7
+    frequency_adjustment_rate: 0.1
+    migration_enabled: true
+
+scenarios:
+  high_load:
+    task_mode: "cpu_bound"
+    arrival_rate: 2.0
+    total_tasks: 200
+    
+  intermittent:
+    task_mode: "mixed"
+    arrival_rate: 0.8
+    burst_probability: 0.1
+    burst_size: 10
+    
+  heterogeneous:
+    processors_heterogeneous: true
+    task_mode: "mixed"
+    
+  unexpected_burst:
+    task_mode: "cpu_bound"
+    arrival_rate: 0.3
+    burst_times: [200, 500, 800]
+    burst_size: 25
+
+metrics:
+  collect_interval: 10    # Cada cuánto recolectar métricas
+  export_format: "csv"    # "csv", "json"
